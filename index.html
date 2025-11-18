@@ -84,15 +84,13 @@ function makeBadger(){
     y: Math.random()*200,
     size: 14,
     speedX: 2 + Math.random()*1.5,
-    speedY: 2 + Math.random()*1.5,
-    type: "normal"
+    speedY: 2 + Math.random()*1.5
   };
 }
 
 // ------------- FLASHY TITLE SCREEN -------
 function drawMenu(){
   ctx.clearRect(0,0,320,240);
-
   let t = Date.now() / 200;
   ctx.fillStyle = `hsl(${(t*20)%360}, 80%, 60%)`;
   ctx.font = "24px monospace";
@@ -137,28 +135,35 @@ function drawGameOver(){
 }
 
 // ---------------- SPAWN LOGIC ----------------
-function spawnDirt(){ 
-  dirtPiles.push({x:Math.random()*300, y:Math.random()*220, size:10}); 
+function spawnDirt(){
+  dirtPiles.push({
+    x: Math.random()*300,
+    y: Math.random()*220,
+    size: 10
+  });
 }
-function spawnBadger(){ 
-  badgers.push(makeBadger()); 
+
+function spawnBadger(){
+  badgers.push(makeBadger());
 }
 
 // ---------------- MOVEMENT -------------------
 let mv = {up:false, down:false, left:false, right:false};
+
 function moveBarber(){
-  if(mv.up) barber.y -= barber.speed;
-  if(mv.down) barber.y += barber.speed;
-  if(mv.left) barber.x -= barber.speed;
-  if(mv.right) barber.x += barber.speed;
+  if (mv.up) barber.y -= barber.speed;
+  if (mv.down) barber.y += barber.speed;
+  if (mv.left) barber.x -= barber.speed;
+  if (mv.right) barber.x += barber.speed;
 }
 
 function moveBadgers(){
   badgers.forEach(b =>{
     b.x += b.speedX;
     b.y += b.speedY;
-    if(b.x<0||b.x>306) b.speedX*=-1;
-    if(b.y<0||b.y>226) b.speedY*=-1;
+
+    if (b.x < 0 || b.x > 306) b.speedX *= -1;
+    if (b.y < 0 || b.y > 226) b.speedY *= -1;
   });
 }
 
@@ -171,19 +176,25 @@ function collide(a,b){
 }
 
 // ---------------- INPUT + ARROWS -----------
-canvas.addEventListener("click", ()=>{
-  if(STATE==="MENU") startGame();
-  else if(STATE==="GAMEOVER") startGame();
+canvas.addEventListener("click", () => {
+  if (STATE === "MENU") startGame();
+  else if (STATE === "GAMEOVER") startGame();
 });
 
 function arrowControl(id, dir){
   let el = document.getElementById(id);
-  el.addEventListener("mousedown", ()=> mv[dir]=true);
-  el.addEventListener("mouseup", ()=> mv[dir]=false);
-  el.addaddEventListener("mouseleave", ()=> mv[dir]=false);
-  el.addEventListener("touchstart", (e)=> { e.preventDefault(); mv[dir]=true; });
-  el.addEventListener("touchend", ()=> mv[dir]=false);
+  el.addEventListener("mousedown", ()=> mv[dir] = true);
+  el.addEventListener("mouseup",   ()=> mv[dir] = false);
+  el.addEventListener("mouseleave",()=> mv[dir] = false);
+
+  el.addEventListener("touchstart", (e)=> {
+    e.preventDefault();
+    mv[dir] = true;
+  });
+
+  el.addEventListener("touchend", ()=> mv[dir] = false);
 }
+
 arrowControl("up","up");
 arrowControl("down","down");
 arrowControl("left","left");
@@ -191,62 +202,71 @@ arrowControl("right","right");
 
 // ---------------- UPDATE ----------------------
 function update(){
-  if(STATE!=="PLAYING") return;
+  if (STATE !== "PLAYING") return;
 
   moveBarber();
   moveBadgers();
 
-  for(let i=dirtPiles.length-1;i>=0;i--){
-    if(collide(barber,dirtPiles[i])){
+  for (let i = dirtPiles.length - 1; i >= 0; i--){
+    if (collide(barber, dirtPiles[i])){
       dirtPiles.splice(i,1);
       sweepSound.play();
       score++;
-      if(score % 10 === 0){ 
-        level++; 
-        spawnBadger(); 
+
+      if (score % 10 === 0){
+        level++;
+        spawnBadger();
       }
     }
   }
 
-  for(let b of badgers){ 
-    if(collide(barber,b)) gameOver(); 
+  for (let b of badgers){
+    if (collide(barber, b)){
+      gameOver();
+    }
   }
 }
 
 // ---------------- DRAW ------------------------
 function drawBarber(){
-  ctx.fillStyle="#3b82f6";
-  ctx.fillRect(barber.x,barber.y,12,12);
-  ctx.fillStyle="#f5d7b9";
-  ctx.fillRect(barber.x+2,barber.y-8,8,8);
+  ctx.fillStyle = "#3b82f6";
+  ctx.fillRect(barber.x, barber.y, 12, 12);
+
+  ctx.fillStyle = "#f5d7b9";
+  ctx.fillRect(barber.x+2, barber.y-8, 8, 8);
 }
 
 function drawBadger(b){
-  ctx.fillStyle="#5e4632";
-  ctx.fillRect(b.x,b.y,b.size,b.size);
-  ctx.fillStyle="#fff";
-  ctx.fillRect(b.x+2,b.y,2,b.size);
-  ctx.fillRect(b.x+8,b.y,2,b.size);
+  ctx.fillStyle = "#5e4632";
+  ctx.fillRect(b.x, b.y, b.size, b.size);
+
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(b.x+2, b.y, 2, b.size);
+  ctx.fillRect(b.x+8, b.y, 2, b.size);
 }
 
 function drawPlaying(){
   ctx.clearRect(0,0,320,240);
+
   drawBarber();
   badgers.forEach(drawBadger);
-  dirtPiles.forEach(d=>{
-    ctx.fillStyle="yellow";
-    ctx.fillRect(d.x,d.y,d.size,d.size);
+
+  dirtPiles.forEach(d => {
+    ctx.fillStyle = "yellow";
+    ctx.fillRect(d.x, d.y, d.size, d.size);
   });
-  ctx.fillStyle="white";
-  ctx.fillText(`Score: ${score}`,10,20);
-  ctx.fillText(`Level: ${level}`,250,20);
+
+  ctx.fillStyle = "white";
+  ctx.fillText(`Score: ${score}`, 10, 20);
+  ctx.fillText(`Level: ${level}`, 250, 20);
 }
 
 // ---------------- LOOP ------------------------
 function loop(){
-  if(STATE==="MENU") drawMenu();
-  else if(STATE==="PLAYING"){ update(); drawPlaying(); }
-  else if(STATE==="GAMEOVER") drawGameOver();
+  if (STATE === "MENU")       drawMenu();
+  else if (STATE === "PLAYING") { update(); drawPlaying(); }
+  else if (STATE === "GAMEOVER") drawGameOver();
+
   requestAnimationFrame(loop);
 }
 loop();
