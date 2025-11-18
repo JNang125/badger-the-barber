@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Badger the Barber — Ultimate Edition</title>
+<style>
+  body {
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    color: white;
+    font-family: monospace;
+  }
+  canvas {
+    image-rendering: pixelated;
+    border: 4px solid #fff;
+    background: #222;
+  }
+  #controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .row { display: flex; }
+  .btn {
+    width: 50px;
+    height: 50px;
+    margin: 5px;
+    background: #333;
+    border: 2px solid #777;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 24px;
+    user-select: none;
+  }
+  .btn:active { background: #555; }
+</style>
+</head>
+<body>
+<canvas id="game" width="320" height="240"></canvas>
+
+<div id="controls">
+  <div class="row"><div class="btn" id="up">⬆️</div></div>
+  <div class="row">
+    <div class="btn" id="left">⬅️</div>
+    <div class="btn" id="down">⬇️</div>
+    <div class="btn" id="right">➡️</div>
+  </div>
+</div>
+
+<script>
+// ---------------- AUDIO ----------------
+let music = new Audio("https://actions.google.com/sounds/v1/ambiences/arcade_game.ogg");
+music.loop = true;
+let sweepSound = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+let gameOverSound = new Audio("https://actions.google.com/sounds/v1/cartoon/concussive_hit_guitar_boing.ogg");
+
+// -------------- GAME VARIABLES ---------
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+let STATE = "MENU";
+let barber, badgers, dirtPiles, score, highScore, level, dirtInterval;
+highScore = Number(localStorage.getItem("btb_highscore")) || 0;
+
+function resetGame(){
+  barber = { x:150, y:110, size:12, speed:2 };
+  badgers = [makeBadger()];
+  dirtPiles = [];
+  score = 0;
+  level = 1;
+}
+
+function makeBadger(){
+  return {
+    x: Math.random()*280,
+    y: Math.random()*200,
+    size: 14,
+    speedX: 2 + Math.random()*1.5,
+    speedY: 2 + Math.random()*1.5,
+    type: "normal"
+  };
+}
+
+// ------------- FLASHY TITLE SCREEN -------
+function drawMenu(){
+  ctx.clearRect(0,0,320,240);
+
+  let t = Date.now() / 200;
+  ctx.fillStyle = `hsl(${(t*20)%360}, 80%, 60%)`;
+  ctx.font = "24px monospace";
+  ctx.fillText("BADGER THE BARBER", 10, 100);
+
+  ctx.fillStyle = "white";
+  ctx.font = "14px monospace";
+  ctx.fillText("CLICK TO START", 100, 150);
+}
+
+// ---------------- START GAME -----------------
+function startGame(){
+  resetGame();
+  STATE = "PLAYING";
+  clearInterval(dirtInterval);
+  dirtInterval = setInterval(spawnDirt, 900);
+  music.play();
+}
+
+function gameOver(){
+  STATE = "GAMEOVER";
+  clearInterval(dirtInterval);
+  music.pause();
+  gameOverSound.play();
+
+  if (score > highScore) {
+    highScore = score;
+    localStorage.setItem("btb_highscore", highScore);
+  }
+}
+
+function drawGameOver(){
+  ctx.fillStyle="rgba(0,0,0,0.7)";
+  ctx.fillRect(0,0,320,240);
+  ctx.fillStyle="red";
+  ctx.font="20px monospace";
+  ctx.fillText("GAME OVER", 90, 100);
+  ctx.fillStyle="white";
+  ctx.fillText(`Score: ${score}`, 120, 130);
+  ctx.fillText(`High: ${highScore}`, 120, 150);
+  ctx.fillText("CLICK TO RESTART", 85, 180);
+}
+
+// ---------------- SPAWN LOGIC ----------------
+function spawnDirt(){ 
+  dirtPiles.push({x:Math.random()*300, y:Math.random()*220, size:10}); 
+}
+function spawnBadger(){ 
+  badgers.push(makeBadger()); 
+}
+
+// ---------------- MOVEMENT -------------------
+let mv = {up:false, down:false, left:false, right:false};
+function moveBarber(){
+  if(mv.up) barber.y -= barber.speed;
+  if(mv.down) barber.y += barber.speed;
+  if(mv.left) barber.x -= barber.speed;
+  if(mv.right) barber.x += barber.speed;
+}
+
+function moveBadgers(){
+  badgers.forEach(b =>{
+    b.x += b.speedX;
+    b.y += b.speedY;
+    if(b.x<0||b.x>306) b.speedX*=-1;
+    if(b.y<0||b.y>226) b.speedY*=-1;
+  });
+}
+
+// ---------------- COLLISION ------------------
+function collide(a,b){
+  return a.x < b.x + b.size &&
+         a.x + a.size > b.x &&
+         a.y < b.y + b.size &&
+         a.y + a.size > b.y;
+}
+
+// ---------------- INPUT + ARROWS -----------
+canvas.addEventListener("click", ()=>{
+  if(STATE==="MENU") startGame();
+  else if(STATE==="GAMEOVER") startGame();
+});
+
+function arrowControl(id, dir){
+  let el = document.getElementById(id);
+  el.addEventListener("mousedown", ()=> mv[dir]=true);
+  el.addEventListener("mouseup", ()=> mv[dir]=false);
+  el.addaddEventListener("mouseleave", ()=> mv[dir]=false);
+  el.addEventListener("touchstart", (e)=> { e.preventDefault(); mv[dir]=true; });
+  el.addEventListener("touchend", ()=> mv[dir]=false);
+}
+arrowControl("up","up");
+arrowControl("down","down");
+arrowControl("left","left");
+arrowControl("right","right");
+
+// ---------------- UPDATE ----------------------
+function update(){
+  if(STATE!=="PLAYING") return;
+
+  moveBarber();
+  moveBadgers();
+
+  for(let i=dirtPiles.length-1;i>=0;i--){
+    if(collide(barber,dirtPiles[i])){
+      dirtPiles.splice(i,1);
+      sweepSound.play();
+      score++;
+      if(score % 10 === 0){ 
+        level++; 
+        spawnBadger(); 
+      }
+    }
+  }
+
+  for(let b of badgers){ 
+    if(collide(barber,b)) gameOver(); 
+  }
+}
+
+// ---------------- DRAW ------------------------
+function drawBarber(){
+  ctx.fillStyle="#3b82f6";
+  ctx.fillRect(barber.x,barber.y,12,12);
+  ctx.fillStyle="#f5d7b9";
+  ctx.fillRect(barber.x+2,barber.y-8,8,8);
+}
+
+function drawBadger(b){
+  ctx.fillStyle="#5e4632";
+  ctx.fillRect(b.x,b.y,b.size,b.size);
+  ctx.fillStyle="#fff";
+  ctx.fillRect(b.x+2,b.y,2,b.size);
+  ctx.fillRect(b.x+8,b.y,2,b.size);
+}
+
+function drawPlaying(){
+  ctx.clearRect(0,0,320,240);
+  drawBarber();
+  badgers.forEach(drawBadger);
+  dirtPiles.forEach(d=>{
+    ctx.fillStyle="yellow";
+    ctx.fillRect(d.x,d.y,d.size,d.size);
+  });
+  ctx.fillStyle="white";
+  ctx.fillText(`Score: ${score}`,10,20);
+  ctx.fillText(`Level: ${level}`,250,20);
+}
+
+// ---------------- LOOP ------------------------
+function loop(){
+  if(STATE==="MENU") drawMenu();
+  else if(STATE==="PLAYING"){ update(); drawPlaying(); }
+  else if(STATE==="GAMEOVER") drawGameOver();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
